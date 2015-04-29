@@ -39,6 +39,8 @@ public class jmongosysbenchload {
     public static String myWriteConcern;
     public static String serverName;
     public static int serverPort;
+    public static Integer useSSL;
+    public static String authenticationDB;
     public static String userName;
     public static String passWord;
 
@@ -48,9 +50,9 @@ public class jmongosysbenchload {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 15) {
+        if (args.length != 17) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
-            logMe("jsysbenchload [number of collections] [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)]  [writeconcern] [server] [port] [username] [password]");
+            logMe("jsysbenchload [number of collections] [database name] [number of writer threads] [documents per collection] [documents per insert] [inserts feedback] [seconds feedback] [log file name] [compression type] [basement node size (bytes)] [writeconcern] [server] [port] [ssl] [authentication db] [username] [password]");
             System.exit(1);
         }
 
@@ -67,8 +69,10 @@ public class jmongosysbenchload {
         myWriteConcern = args[10];
         serverName = args[11];
         serverPort = Integer.valueOf(args[12]);
-        userName = args[13];
-        passWord = args[14];
+        useSSL = Boolean.getBoolean(args[13]);
+        authenticationDB = args[14];
+        userName = args[15];
+        passWord = args[16];
 
         WriteConcern myWC = new WriteConcern();
         if (myWriteConcern.toLowerCase().equals("fsync_safe")) {
@@ -106,7 +110,11 @@ public class jmongosysbenchload {
         logMe("  Server:Port = %s:%d",serverName,serverPort);
         logMe("  Username = %s",userName);
 
-        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
+        MongoClientOptions clientOptions = MongoClientOptions.Builder().connectionsPerHost(2048)
+                                                                       .socketTimeout(60000)
+                                                                       .writeConcern(myWC)
+                                                                       .sslEnabled(useSSL)
+                                                                       .build();
         ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
 
         // Credential login is optional.
@@ -114,7 +122,7 @@ public class jmongosysbenchload {
         if (userName.isEmpty() || userName.equalsIgnoreCase("none")) {
             m = new MongoClient(srvrAdd);
         } else {
-            MongoCredential credential = MongoCredential.createCredential(userName, dbName, passWord.toCharArray());
+            MongoCredential credential = MongoCredential.createCredential(userName, authenticationDB, passWord.toCharArray());
             m = new MongoClient(srvrAdd, Arrays.asList(credential));
         }
 
@@ -326,8 +334,8 @@ public class jmongosysbenchload {
 
     public static String sysbenchString(java.util.Random rand, String thisMask) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0, n = thisMask.length() ; i < n ; i++) { 
-            char c = thisMask.charAt(i); 
+        for (int i = 0, n = thisMask.length() ; i < n ; i++) {
+            char c = thisMask.charAt(i);
             if (c == '#') {
                 sb.append(String.valueOf(rand.nextInt(10)));
             } else if (c == '@') {

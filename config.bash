@@ -4,7 +4,7 @@
 export DB_NAME=sbtest
 
 # database username on DB_NAME
-#  Use USERNAME=none 
+#  Use USERNAME=none
 #  to login to mongodb without using credentials.
 export USERNAME=myuser
 
@@ -16,6 +16,12 @@ export MONGO_SERVER=localhost
 
 # port of the server to connect to
 export MONGO_PORT=27017
+
+# whether to use SSL to connect to the MongoDB instance
+export USE_SSL=true
+
+# which database to authenticate against
+export AUTHENTICATION_DB=overeasyauth
 
 # Use "yes" to load the collections
 DOLOAD=yes

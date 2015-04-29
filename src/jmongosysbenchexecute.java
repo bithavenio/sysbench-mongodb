@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import javax.net.ssl.SSLSocketFactory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -48,6 +49,8 @@ public class jmongosysbenchexecute {
     public static Integer maxThreadTPS;
     public static String serverName;
     public static int serverPort;
+    public static Integer useSSL;
+    public static String authenticationDB;
     public static String userName;
     public static String passWord;
 
@@ -66,20 +69,20 @@ public class jmongosysbenchexecute {
     public static int allDone = 0;
 
     public static long rngSeed = 0;
-    
+
     public jmongosysbenchexecute() {
     }
 
     public static void main (String[] args) throws Exception {
-        if (args.length != 24) {
+        if (args.length != 26) {
             logMe("*** ERROR : CONFIGURATION ISSUE ***");
             logMe("jsysbenchexecute [number of collections] [database name] [number of writer threads] [documents per collection] [seconds feedback] "+
                                    "[log file name] [auto commit Y/N] [runtime (seconds)] [range size] [point selects] "+
                                    "[simple ranges] [sum ranges] [order ranges] [distinct ranges] [index updates] [non index updates] [inserts] [writeconcern] "+
-                                   "[max tps] [server] [port] [seed] [username] [password]");
+                                   "[max tps] [server] [port] [seed] [use ssl] [authentication db] [username] [password]");
             System.exit(1);
         }
-        
+
         numCollections = Integer.valueOf(args[0]);
         dbName = args[1];
         writerThreads = Integer.valueOf(args[2]);
@@ -102,8 +105,10 @@ public class jmongosysbenchexecute {
         serverName = args[19];
         serverPort = Integer.valueOf(args[20]);
         rngSeed = Long.valueOf(args[21]);
-        userName = args[22];
-        passWord = args[23];
+        useSSL = Boolean.getBoolean(args[22]);
+        authenticationDB = args[23];
+        userName = args[24];
+        passWord = args[25];
 
         maxThreadTPS = (maxTPS / writerThreads) + 1;
 
@@ -155,7 +160,12 @@ public class jmongosysbenchexecute {
         logMe("  seed                     = %d",rngSeed);
         logMe("  userName                 = %s",userName);
 
-        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048).socketTimeout(60000).writeConcern(myWC).build();
+        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048)
+                                                                           .socketTimeout(60000)
+                                                                           .writeConcern(myWC)
+                                                                           .sslEnabled(useSSL)
+                                                                           .build();
+
         ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
 
         // Credential login is optional.
@@ -163,7 +173,7 @@ public class jmongosysbenchexecute {
         if (userName.isEmpty() || userName.equalsIgnoreCase("none")) {
             m = new MongoClient(srvrAdd);
         } else {
-            MongoCredential credential = MongoCredential.createCredential(userName, dbName, passWord.toCharArray());
+            MongoCredential credential = MongoCredential.createCredential(userName, authenticationDB, passWord.toCharArray());
             m = new MongoClient(srvrAdd, Arrays.asList(credential));
         }
 
@@ -251,7 +261,7 @@ public class jmongosysbenchexecute {
         long numRangeQueries = 0;
 
         java.util.Random rand;
-        
+
         MyWriter(int threadCount, int threadNumber, int numMaxInserts, DB db, int numCollections, long rngSeed) {
             this.threadCount = threadCount;
             this.threadNumber = threadNumber;
@@ -430,10 +440,10 @@ public class jmongosysbenchexecute {
                         int startId = rand.nextInt(numMaxInserts)+1;
 
                         WriteResult wrUpdate = coll.update(new BasicDBObject("_id", startId), new BasicDBObject("$inc", new BasicDBObject("k",1)), false, false);
-    
+
                         //System.out.println(wrUpdate.toString());
                     }
-    
+
                     for (int i=1; i <= oltpNonIndexUpdates; i++) {
                         //for i=1, oltp_non_index_updates do
                         //   c_val = sb_rand_str("###########-###########-###########-###########-###########-###########-###########-###########-###########-###########")
@@ -458,7 +468,7 @@ public class jmongosysbenchexecute {
                     for (int i=1; i <= oltpInserts; i++) {
                         //i = sb_rand(1, oltp_table_size)
                         //rs = db_query("DELETE FROM " .. table_name .. " WHERE id=" .. i)
-                      
+
                         //db.sbtest8.remove({_id: 5523412})
 
                         int startId = rand.nextInt(numMaxInserts)+1;
@@ -504,8 +514,8 @@ public class jmongosysbenchexecute {
 
     public static String sysbenchString(java.util.Random rand, String thisMask) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0, n = thisMask.length() ; i < n ; i++) { 
-            char c = thisMask.charAt(i); 
+        for (int i = 0, n = thisMask.length() ; i < n ; i++) {
+            char c = thisMask.charAt(i);
             if (c == '#') {
                 sb.append(String.valueOf(rand.nextInt(10)));
             } else if (c == '@') {
@@ -578,9 +588,9 @@ public class jmongosysbenchexecute {
                     long thisIntervalInserts = thisInserts - lastInserts;
                     double thisIntervalInsertsPerSecond = thisIntervalInserts/(double)thisIntervalMs*1000.0;
                     double thisInsertsPerSecond = thisInserts/(double)elapsed*1000.0;
-                    
+
                     logMe("%,d seconds : cum tps=%,.2f : int tps=%,.2f : cum ips=%,.2f : int ips=%,.2f : writers=%,d", elapsed / 1000l, thisSysbenchTransactionsPerSecond, thisIntervalSysbenchTransactionsPerSecond, thisInsertsPerSecond, thisIntervalInsertsPerSecond, thisWriterThreads);
-                    
+
                     try {
                         if (outputHeader)
                         {
