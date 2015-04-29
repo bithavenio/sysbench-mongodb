@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import javax.net.ssl.SSLSocketFactory;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -39,7 +40,7 @@ public class jmongosysbenchload {
     public static String myWriteConcern;
     public static String serverName;
     public static int serverPort;
-    public static Integer useSSL;
+    public static boolean useSSL;
     public static String authenticationDB;
     public static String userName;
     public static String passWord;
@@ -69,7 +70,7 @@ public class jmongosysbenchload {
         myWriteConcern = args[10];
         serverName = args[11];
         serverPort = Integer.valueOf(args[12]);
-        useSSL = Boolean.getBoolean(args[13]);
+        useSSL = Boolean.parseBoolean(args[13]);
         authenticationDB = args[14];
         userName = args[15];
         passWord = args[16];
@@ -110,11 +111,21 @@ public class jmongosysbenchload {
         logMe("  Server:Port = %s:%d",serverName,serverPort);
         logMe("  Username = %s",userName);
 
-        MongoClientOptions clientOptions = MongoClientOptions.Builder().connectionsPerHost(2048)
-                                                                       .socketTimeout(60000)
-                                                                       .writeConcern(myWC)
-                                                                       .sslEnabled(useSSL)
-                                                                       .build();
+
+        MongoClientOptions.Builder clientOptionsBuilder = new MongoClientOptions.Builder().connectionsPerHost(2048)
+                                                                                          .socketTimeout(60000)
+                                                                                          .writeConcern(myWC);
+        if (useSSL) {
+            clientOptionsBuilder.socketFactory(SSLSocketFactory.getDefault());
+        }
+
+        MongoClientOptions clientOptions = clientOptionsBuilder.build();
+
+        // MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048)
+        //                                                                    .socketTimeout(60000)
+        //                                                                    .writeConcern(myWC)
+        //                                                                    .sslEnabled(useSSL)
+        //                                                                    .build();
         ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
 
         // Credential login is optional.

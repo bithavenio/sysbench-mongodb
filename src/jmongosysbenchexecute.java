@@ -49,7 +49,7 @@ public class jmongosysbenchexecute {
     public static Integer maxThreadTPS;
     public static String serverName;
     public static int serverPort;
-    public static Integer useSSL;
+    public static boolean useSSL;
     public static String authenticationDB;
     public static String userName;
     public static String passWord;
@@ -160,12 +160,14 @@ public class jmongosysbenchexecute {
         logMe("  seed                     = %d",rngSeed);
         logMe("  userName                 = %s",userName);
 
-        MongoClientOptions clientOptions = new MongoClientOptions.Builder().connectionsPerHost(2048)
-                                                                           .socketTimeout(60000)
-                                                                           .writeConcern(myWC)
-                                                                           .sslEnabled(useSSL)
-                                                                           .build();
+        MongoClientOptions.Builder clientOptionsBuilder = new MongoClientOptions.Builder().connectionsPerHost(2048)
+                                                                                          .socketTimeout(60000)
+                                                                                          .writeConcern(myWC);
+        if (useSSL) {
+            clientOptionsBuilder.socketFactory(SSLSocketFactory.getDefault());
+        }
 
+        MongoClientOptions clientOptions = clientOptionsBuilder.build();
         ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
 
         // Credential login is optional.
