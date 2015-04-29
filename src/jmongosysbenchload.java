@@ -109,6 +109,8 @@ public class jmongosysbenchload {
         logMe("  logging to file %s",logFileName);
         logMe("  write concern = %s",myWriteConcern);
         logMe("  Server:Port = %s:%d",serverName,serverPort);
+        logMe("  useSSL = %s",useSSL);
+        logMe("  authenticationDB = %s",authenticationDB);
         logMe("  Username = %s",userName);
 
 
@@ -131,10 +133,10 @@ public class jmongosysbenchload {
         // Credential login is optional.
         MongoClient m;
         if (userName.isEmpty() || userName.equalsIgnoreCase("none")) {
-            m = new MongoClient(srvrAdd);
+            m = new MongoClient(srvrAdd, clientOptions);
         } else {
             MongoCredential credential = MongoCredential.createCredential(userName, authenticationDB, passWord.toCharArray());
-            m = new MongoClient(srvrAdd, Arrays.asList(credential));
+            m = new MongoClient(srvrAdd, Arrays.asList(credential), clientOptions);
         }
 
         logMe("mongoOptions | " + m.getMongoOptions().toString());

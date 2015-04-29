@@ -105,7 +105,7 @@ public class jmongosysbenchexecute {
         serverName = args[19];
         serverPort = Integer.valueOf(args[20]);
         rngSeed = Long.valueOf(args[21]);
-        useSSL = Boolean.getBoolean(args[22]);
+        useSSL = Boolean.parseBoolean(args[22]);
         authenticationDB = args[23];
         userName = args[24];
         passWord = args[25];
@@ -158,14 +158,24 @@ public class jmongosysbenchexecute {
         logMe("  maximum tps (per thread) = %d",maxThreadTPS);
         logMe("  Server:Port = %s:%d",serverName,serverPort);
         logMe("  seed                     = %d",rngSeed);
+        logMe("  useSSL = %s",useSSL);
+        logMe("  authenticationDB = %s",authenticationDB);
         logMe("  userName                 = %s",userName);
 
         MongoClientOptions.Builder clientOptionsBuilder = new MongoClientOptions.Builder().connectionsPerHost(2048)
                                                                                           .socketTimeout(60000)
                                                                                           .writeConcern(myWC);
+
+
         if (useSSL) {
             clientOptionsBuilder.socketFactory(SSLSocketFactory.getDefault());
         }
+        // if (useSSL) {
+        //     javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLSv1.1");
+        //     javax.net.ssl.SSLSocketFactory socketFactory = new javax.net.ssl.SSLSocketFactory(sslContext, new String[]{"TLSv1.1"}, null, null)
+
+        //     clientOptionsBuilder.socketFactory(socketFactory);
+        // }
 
         MongoClientOptions clientOptions = clientOptionsBuilder.build();
         ServerAddress srvrAdd = new ServerAddress(serverName,serverPort);
@@ -173,10 +183,10 @@ public class jmongosysbenchexecute {
         // Credential login is optional.
         MongoClient m;
         if (userName.isEmpty() || userName.equalsIgnoreCase("none")) {
-            m = new MongoClient(srvrAdd);
+            m = new MongoClient(srvrAdd, clientOptions);
         } else {
             MongoCredential credential = MongoCredential.createCredential(userName, authenticationDB, passWord.toCharArray());
-            m = new MongoClient(srvrAdd, Arrays.asList(credential));
+            m = new MongoClient(srvrAdd, Arrays.asList(credential), clientOptions);
         }
 
         logMe("mongoOptions | " + m.getMongoOptions().toString());
